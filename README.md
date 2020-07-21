@@ -39,7 +39,16 @@ app/run.py: This file is used to launch the Flask web app. Some data visualizati
 
 ### Screenshots
 
+#### App Dashboard
 ![Web App Dashboard](/screenshots/App_dashboard.png)
+
+#### Data Visualizations
+
+![Web App Dashboard](/screenshots/App_dashboard.png)
+
+![Web App Dashboard](/screenshots/relative_reporting_by_weather_condition.png)
+
+![Web App Dashboard](/screenshots/reported_casualties_by_weather_condition.png)
 
 
 ### Licensing, Authors, Acknowledgements

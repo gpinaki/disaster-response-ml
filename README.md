@@ -30,13 +30,14 @@ SQLlite Database Libraries: SQLalchemy
 Model Loading and Saving Library: Pickle
 Web App and Data Visualization: Flask, Plotly, matplotlib
 
-
 ### Codebase Overview
 * app/templates/*: templates/html files for web app
 * data/process_data.py: Extract Train Load (ETL) pipeline used for data cleaning, feature extraction, and stores data in a SQLite database
 * models/train_classifier.py: A machine learning pipeline that loads data, trains a model, and saves the trained model as a .pkl file for later use
 * app/run.py: This file is used to launch the Flask web app. Some data visualizations are done through this run.py
 
+### Github Repo
+[Github Link](https://github.com/gpinaki/disaster-response-ml/)
 
 #### Data Visualizations
 
@@ -47,7 +48,6 @@ Web App and Data Visualization: Flask, Plotly, matplotlib
 ![Casualties reported by various weather conditions](/screenshots/reported_casualties_by_weather_condition.png)
 
 ![Reported Messages by Genre](/screenshots/message_breakdown_by_genre.png)
-
 
 ### Licensing, Authors, Acknowledgements
 

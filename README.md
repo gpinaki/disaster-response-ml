@@ -32,10 +32,10 @@ Web App and Data Visualization: Flask, Plotly, matplotlib
 
 
 ### Codebase Overview
-*app/templates/*: templates/html files for web app
-*data/process_data.py: Extract Train Load (ETL) pipeline used for data cleaning, feature extraction, and stores data in a SQLite database
-*models/train_classifier.py: A machine learning pipeline that loads data, trains a model, and saves the trained model as a .pkl file for later use
-*app/run.py: This file is used to launch the Flask web app. Some data visualizations are done through this run.py
+* app/templates/*: templates/html files for web app
+* data/process_data.py: Extract Train Load (ETL) pipeline used for data cleaning, feature extraction, and stores data in a SQLite database
+* models/train_classifier.py: A machine learning pipeline that loads data, trains a model, and saves the trained model as a .pkl file for later use
+* app/run.py: This file is used to launch the Flask web app. Some data visualizations are done through this run.py
 
 
 #### Data Visualizations

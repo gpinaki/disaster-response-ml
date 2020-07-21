@@ -37,18 +37,17 @@ data/process_data.py: Extract Train Load (ETL) pipeline used for data cleaning, 
 models/train_classifier.py: A machine learning pipeline that loads data, trains a model, and saves the trained model as a .pkl file for later use
 app/run.py: This file is used to launch the Flask web app. Some data visualizations are done through this run.py
 
-### Screenshots
-
-#### App Dashboard
-![Web App Dashboard](/screenshots/App_dashboard.png)
 
 #### Data Visualizations
 
 ![Web App Dashboard](/screenshots/App_dashboard.png)
 
-![Web App Dashboard](/screenshots/relative_reporting_by_weather_condition.png)
 
-![Web App Dashboard](/screenshots/reported_casualties_by_weather_condition.png)
+![Reported Messages by Weather Conditions](/screenshots/relative_reporting_by_weather_condition.png)
+
+
+![Casualties reported by various weather conditions](/screenshots/reported_casualties_by_weather_condition.png)
+
 
 
 ### Licensing, Authors, Acknowledgements

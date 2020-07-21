@@ -1,0 +1,2106 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# ML Pipeline Preparation\n",
+    "Follow the instructions below to help you create your ML pipeline.\n",
+    "### 1. Import libraries and load data from database.\n",
+    "- Import Python libraries\n",
+    "- Load dataset from database with [`read_sql_table`](https://pandas.pydata.org/pandas-docs/stable/generated/pandas.read_sql_table.html)\n",
+    "- Define feature and target variables X and Y"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[nltk_data] Downloading package punkt to /root/nltk_data...\n",
+      "[nltk_data]   Unzipping tokenizers/punkt.zip.\n",
+      "[nltk_data] Downloading package wordnet to /root/nltk_data...\n",
+      "[nltk_data]   Unzipping corpora/wordnet.zip.\n",
+      "[nltk_data] Downloading package stopwords to /root/nltk_data...\n",
+      "[nltk_data]   Unzipping corpora/stopwords.zip.\n"
+     ]
+    }
+   ],
+   "source": [
+    "# import libraries\n",
+    "import pandas as pd\n",
+    "from sqlalchemy import create_engine\n",
+    "import string\n",
+    "import re\n",
+    "import nltk\n",
+    "import string\n",
+    "import numpy as np\n",
+    "from sklearn.model_selection import GridSearchCV\n",
+    "from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer\n",
+    "from sqlalchemy import create_engine\n",
+    "nltk.download(['punkt', 'wordnet', 'stopwords'])\n",
+    "from sklearn.metrics import classification_report, accuracy_score\n",
+    "import matplotlib.pyplot as plt\n",
+    "%matplotlib inline"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0.19.1\n"
+     ]
+    }
+   ],
+   "source": [
+    "import sklearn\n",
+    "print(sklearn.__version__)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 2. Split data into X and Y "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# load data from database\n",
+    "con = 'sqlite:///disaster_db.db'\n",
+    "engine = create_engine(con)\n",
+    "df = pd.read_sql_table('messages',con)\n",
+    "X = df['message']\n",
+    "Y = df.iloc[:,4:]\n",
+    "category_names = Y.columns.tolist()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>id</th>\n",
+       "      <th>message</th>\n",
+       "      <th>original</th>\n",
+       "      <th>genre</th>\n",
+       "      <th>related</th>\n",
+       "      <th>request</th>\n",
+       "      <th>offer</th>\n",
+       "      <th>aid_related</th>\n",
+       "      <th>medical_help</th>\n",
+       "      <th>medical_products</th>\n",
+       "      <th>...</th>\n",
+       "      <th>aid_centers</th>\n",
+       "      <th>other_infrastructure</th>\n",
+       "      <th>weather_related</th>\n",
+       "      <th>floods</th>\n",
+       "      <th>storm</th>\n",
+       "      <th>fire</th>\n",
+       "      <th>earthquake</th>\n",
+       "      <th>cold</th>\n",
+       "      <th>other_weather</th>\n",
+       "      <th>direct_report</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>2</td>\n",
+       "      <td>Weather update - a cold front from Cuba that c...</td>\n",
+       "      <td>Un front froid se retrouve sur Cuba ce matin. ...</td>\n",
+       "      <td>direct</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>...</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>7</td>\n",
+       "      <td>Is the Hurricane over or is it not over</td>\n",
+       "      <td>Cyclone nan fini osinon li pa fini</td>\n",
+       "      <td>direct</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>...</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>8</td>\n",
+       "      <td>Looking for someone but no name</td>\n",
+       "      <td>Patnm, di Maryani relem pou li banm nouvel li ...</td>\n",
+       "      <td>direct</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>...</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>9</td>\n",
+       "      <td>UN reports Leogane 80-90 destroyed. Only Hospi...</td>\n",
+       "      <td>UN reports Leogane 80-90 destroyed. Only Hospi...</td>\n",
+       "      <td>direct</td>\n",
+       "      <td>1</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>...</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>12</td>\n",
+       "      <td>says: west side of Haiti, rest of the country ...</td>\n",
+       "      <td>facade ouest d Haiti et le reste du pays aujou...</td>\n",
+       "      <td>direct</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>...</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>5 rows × 40 columns</p>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   id                                            message  \\\n",
+       "0   2  Weather update - a cold front from Cuba that c...   \n",
+       "1   7            Is the Hurricane over or is it not over   \n",
+       "2   8                    Looking for someone but no name   \n",
+       "3   9  UN reports Leogane 80-90 destroyed. Only Hospi...   \n",
+       "4  12  says: west side of Haiti, rest of the country ...   \n",
+       "\n",
+       "                                            original   genre  related  \\\n",
+       "0  Un front froid se retrouve sur Cuba ce matin. ...  direct        1   \n",
+       "1                 Cyclone nan fini osinon li pa fini  direct        1   \n",
+       "2  Patnm, di Maryani relem pou li banm nouvel li ...  direct        1   \n",
+       "3  UN reports Leogane 80-90 destroyed. Only Hospi...  direct        1   \n",
+       "4  facade ouest d Haiti et le reste du pays aujou...  direct        1   \n",
+       "\n",
+       "   request  offer  aid_related  medical_help  medical_products      ...        \\\n",
+       "0        0      0            0             0                 0      ...         \n",
+       "1        0      0            1             0                 0      ...         \n",
+       "2        0      0            0             0                 0      ...         \n",
+       "3        1      0            1             0                 1      ...         \n",
+       "4        0      0            0             0                 0      ...         \n",
+       "\n",
+       "   aid_centers  other_infrastructure  weather_related  floods  storm  fire  \\\n",
+       "0            0                     0                0       0      0     0   \n",
+       "1            0                     0                1       0      1     0   \n",
+       "2            0                     0                0       0      0     0   \n",
+       "3            0                     0                0       0      0     0   \n",
+       "4            0                     0                0       0      0     0   \n",
+       "\n",
+       "   earthquake  cold  other_weather  direct_report  \n",
+       "0           0     0              0              0  \n",
+       "1           0     0              0              0  \n",
+       "2           0     0              0              0  \n",
+       "3           0     0              0              0  \n",
+       "4           0     0              0              0  \n",
+       "\n",
+       "[5 rows x 40 columns]"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df.head()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Additional data analysis to Plot graphs in webapp"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 47,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Weather_Category</th>\n",
+       "      <th>count</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>earthquake</td>\n",
+       "      <td>2452</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>storm</td>\n",
+       "      <td>2440</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>floods</td>\n",
+       "      <td>2149</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>5</th>\n",
+       "      <td>other_weather</td>\n",
+       "      <td>1376</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>cold</td>\n",
+       "      <td>528</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>fire</td>\n",
+       "      <td>282</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "  Weather_Category  count\n",
+       "3       earthquake   2452\n",
+       "1            storm   2440\n",
+       "0           floods   2149\n",
+       "5    other_weather   1376\n",
+       "4             cold    528\n",
+       "2             fire    282"
+      ]
+     },
+     "execution_count": 47,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "def get_categ_cnt(df,col_list,op_cat_colname, op_num_colname):\n",
+    "    '''\n",
+    "    INPUT \n",
+    "        df - a dataframe schema name\n",
+    "        col_list - a Python list with all column names on which count has to be done \n",
+    "        op_cat_colname - category column name\n",
+    "        op_num_colname - count column name (should be int)\n",
+    "    OUTPUT\n",
+    "        df_result - a sorted data farme with each category name and count of the columns\n",
+    "    '''\n",
+    "    result_dict = {}\n",
+    "    for each_col in col_list:\n",
+    "        result_dict[each_col] = df[each_col].sum()\n",
+    "    \n",
+    "    df_result = pd.DataFrame(pd.Series(result_dict)).reset_index()\n",
+    "    df_result.columns = [op_cat_colname, op_num_colname]\n",
+    "    return df_result.sort_values(op_num_colname, ascending=False)\n",
+    "\n",
+    "col_list=['floods', 'storm', 'fire', 'earthquake', 'cold','other_weather']\n",
+    "weather_related = ( df[\"weather_related\"] == 1)\n",
+    "df_weather = df[weather_related]\n",
+    "weather_data =  get_categ_cnt(df_weather,col_list,'Weather_Category','count')  \n",
+    "weather_data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 46,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Weather_Category</th>\n",
+       "      <th>Death_count</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>floods</td>\n",
+       "      <td>335</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>earthquake</td>\n",
+       "      <td>260</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>storm</td>\n",
+       "      <td>238</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>5</th>\n",
+       "      <td>other_weather</td>\n",
+       "      <td>166</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>cold</td>\n",
+       "      <td>63</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>fire</td>\n",
+       "      <td>33</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "  Weather_Category  Death_count\n",
+       "0           floods          335\n",
+       "3       earthquake          260\n",
+       "1            storm          238\n",
+       "5    other_weather          166\n",
+       "4             cold           63\n",
+       "2             fire           33"
+      ]
+     },
+     "execution_count": 46,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "weather_related_death = ( df[\"death\"] == 1 ) & ( df[\"weather_related\"]==1 )\n",
+    "df_new = df[weather_related_death]\n",
+    "weather_death =  get_categ_cnt(df_new,col_list,'Weather_Category','Death_count') \n",
+    "weather_death\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 43,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>index</th>\n",
+       "      <th>0</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>floods</td>\n",
+       "      <td>335</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>storm</td>\n",
+       "      <td>238</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>fire</td>\n",
+       "      <td>33</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>earthquake</td>\n",
+       "      <td>260</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>cold</td>\n",
+       "      <td>63</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>5</th>\n",
+       "      <td>other_weather</td>\n",
+       "      <td>166</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "           index    0\n",
+       "0         floods  335\n",
+       "1          storm  238\n",
+       "2           fire   33\n",
+       "3     earthquake  260\n",
+       "4           cold   63\n",
+       "5  other_weather  166"
+      ]
+     },
+     "execution_count": 43,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df_weather_death"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 49,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['floods', 'earthquake', 'storm', 'other_weather', 'cold', 'fire']"
+      ]
+     },
+     "execution_count": 49,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "weather_death.Weather_Category.tolist()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 50,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[335, 260, 238, 166, 63, 33]"
+      ]
+     },
+     "execution_count": 50,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "list(weather_death.Death_count)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 61,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<script>requirejs.config({paths: { 'plotly': ['https://cdn.plot.ly/plotly-latest.min']},});if(!window.Plotly) {{require(['plotly'],function(plotly) {window.Plotly=plotly;});}}</script>"
+      ],
+      "text/vnd.plotly.v1+html": [
+       "<script>requirejs.config({paths: { 'plotly': ['https://cdn.plot.ly/plotly-latest.min']},});if(!window.Plotly) {{require(['plotly'],function(plotly) {window.Plotly=plotly;});}}</script>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "data": {
+      "application/vnd.plotly.v1+json": {
+       "data": [
+        {
+         "type": "bar",
+         "x": [
+          "floods",
+          "earthquake",
+          "storm",
+          "other_weather",
+          "cold",
+          "fire"
+         ],
+         "y": [
+          335,
+          260,
+          238,
+          166,
+          63,
+          33
+         ]
+        }
+       ],
+       "layout": {}
+      },
+      "text/html": [
+       "<div id=\"e262c136-8068-4288-af6b-41fb5e83567f\" style=\"height: 525px; width: 100%;\" class=\"plotly-graph-div\"></div><script type=\"text/javascript\">require([\"plotly\"], function(Plotly) { window.PLOTLYENV=window.PLOTLYENV || {};window.PLOTLYENV.BASE_URL=\"https://plot.ly\";Plotly.newPlot(\"e262c136-8068-4288-af6b-41fb5e83567f\", [{\"type\": \"bar\", \"x\": [\"floods\", \"earthquake\", \"storm\", \"other_weather\", \"cold\", \"fire\"], \"y\": [335, 260, 238, 166, 63, 33]}], {}, {\"showLink\": true, \"linkText\": \"Export to plot.ly\"})});</script>"
+      ],
+      "text/vnd.plotly.v1+html": [
+       "<div id=\"e262c136-8068-4288-af6b-41fb5e83567f\" style=\"height: 525px; width: 100%;\" class=\"plotly-graph-div\"></div><script type=\"text/javascript\">require([\"plotly\"], function(Plotly) { window.PLOTLYENV=window.PLOTLYENV || {};window.PLOTLYENV.BASE_URL=\"https://plot.ly\";Plotly.newPlot(\"e262c136-8068-4288-af6b-41fb5e83567f\", [{\"type\": \"bar\", \"x\": [\"floods\", \"earthquake\", \"storm\", \"other_weather\", \"cold\", \"fire\"], \"y\": [335, 260, 238, 166, 63, 33]}], {}, {\"showLink\": true, \"linkText\": \"Export to plot.ly\"})});</script>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "import pandas as pd\n",
+    "import plotly.graph_objs as go\n",
+    "from plotly.offline import iplot, init_notebook_mode\n",
+    "init_notebook_mode(connected = True)\n",
+    "graph_two = []\n",
+    "graph_two.append(\n",
+    "      go.Bar(\n",
+    "      x = weather_death.Weather_Category.tolist(),\n",
+    "      y = weather_death.Death_count.tolist(),\n",
+    "      )\n",
+    "    )\n",
+    "layout_two = dict(title = 'Weather Related Death',\n",
+    "                xaxis = dict(title = 'Weather Condition',),\n",
+    "                yaxis = dict(title = 'Count'),\n",
+    "                )\n",
+    "fig = go.Figure(data=graph_two, layout = layout_two)\n",
+    "iplot(graph_two)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 63,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Weather_Category</th>\n",
+       "      <th>count</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>earthquake</td>\n",
+       "      <td>2452</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>storm</td>\n",
+       "      <td>2440</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>floods</td>\n",
+       "      <td>2149</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>5</th>\n",
+       "      <td>other_weather</td>\n",
+       "      <td>1376</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>cold</td>\n",
+       "      <td>528</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>fire</td>\n",
+       "      <td>282</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "  Weather_Category  count\n",
+       "3       earthquake   2452\n",
+       "1            storm   2440\n",
+       "0           floods   2149\n",
+       "5    other_weather   1376\n",
+       "4             cold    528\n",
+       "2             fire    282"
+      ]
+     },
+     "execution_count": 63,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "weather_data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 65,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "application/vnd.plotly.v1+json": {
+       "data": [
+        {
+         "labels": [
+          "earthquake",
+          "storm",
+          "floods",
+          "other_weather",
+          "cold",
+          "fire"
+         ],
+         "type": "pie",
+         "values": [
+          2452,
+          2440,
+          2149,
+          1376,
+          528,
+          282
+         ]
+        }
+       ],
+       "layout": {}
+      },
+      "text/html": [
+       "<div id=\"bc5cf55d-ce37-4571-9975-42f7a420ed73\" style=\"height: 525px; width: 100%;\" class=\"plotly-graph-div\"></div><script type=\"text/javascript\">require([\"plotly\"], function(Plotly) { window.PLOTLYENV=window.PLOTLYENV || {};window.PLOTLYENV.BASE_URL=\"https://plot.ly\";Plotly.newPlot(\"bc5cf55d-ce37-4571-9975-42f7a420ed73\", [{\"type\": \"pie\", \"labels\": [\"earthquake\", \"storm\", \"floods\", \"other_weather\", \"cold\", \"fire\"], \"values\": [2452, 2440, 2149, 1376, 528, 282]}], {}, {\"showLink\": true, \"linkText\": \"Export to plot.ly\"})});</script>"
+      ],
+      "text/vnd.plotly.v1+html": [
+       "<div id=\"bc5cf55d-ce37-4571-9975-42f7a420ed73\" style=\"height: 525px; width: 100%;\" class=\"plotly-graph-div\"></div><script type=\"text/javascript\">require([\"plotly\"], function(Plotly) { window.PLOTLYENV=window.PLOTLYENV || {};window.PLOTLYENV.BASE_URL=\"https://plot.ly\";Plotly.newPlot(\"bc5cf55d-ce37-4571-9975-42f7a420ed73\", [{\"type\": \"pie\", \"labels\": [\"earthquake\", \"storm\", \"floods\", \"other_weather\", \"cold\", \"fire\"], \"values\": [2452, 2440, 2149, 1376, 528, 282]}], {}, {\"showLink\": true, \"linkText\": \"Export to plot.ly\"})});</script>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "\n",
+    "graph_three = []\n",
+    "weather_cat = weather_data['Weather_Category'].tolist()\n",
+    "count = weather_data['count'].tolist()\n",
+    "graph_three.append(go.Pie(\n",
+    "                    labels = weather_cat, \n",
+    "                    values = count)\n",
+    "                  )\n",
+    "fig = go.Figure(data = graph_three)\n",
+    "iplot(fig)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 60,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "application/vnd.plotly.v1+json": {
+       "data": [
+        {
+         "type": "bar",
+         "x": [
+          "floods",
+          "earthquake",
+          "storm",
+          "other_weather",
+          "cold",
+          "fire"
+         ],
+         "y": [
+          335,
+          260,
+          238,
+          166,
+          63,
+          33
+         ]
+        }
+       ],
+       "layout": {}
+      },
+      "text/html": [
+       "<div id=\"b9ba3893-1687-460c-a06d-4f066d25c29b\" style=\"height: 525px; width: 100%;\" class=\"plotly-graph-div\"></div><script type=\"text/javascript\">require([\"plotly\"], function(Plotly) { window.PLOTLYENV=window.PLOTLYENV || {};window.PLOTLYENV.BASE_URL=\"https://plot.ly\";Plotly.newPlot(\"b9ba3893-1687-460c-a06d-4f066d25c29b\", [{\"type\": \"bar\", \"x\": [\"floods\", \"earthquake\", \"storm\", \"other_weather\", \"cold\", \"fire\"], \"y\": [335, 260, 238, 166, 63, 33]}], {}, {\"showLink\": true, \"linkText\": \"Export to plot.ly\"})});</script>"
+      ],
+      "text/vnd.plotly.v1+html": [
+       "<div id=\"b9ba3893-1687-460c-a06d-4f066d25c29b\" style=\"height: 525px; width: 100%;\" class=\"plotly-graph-div\"></div><script type=\"text/javascript\">require([\"plotly\"], function(Plotly) { window.PLOTLYENV=window.PLOTLYENV || {};window.PLOTLYENV.BASE_URL=\"https://plot.ly\";Plotly.newPlot(\"b9ba3893-1687-460c-a06d-4f066d25c29b\", [{\"type\": \"bar\", \"x\": [\"floods\", \"earthquake\", \"storm\", \"other_weather\", \"cold\", \"fire\"], \"y\": [335, 260, 238, 166, 63, 33]}], {}, {\"showLink\": true, \"linkText\": \"Export to plot.ly\"})});</script>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "\n",
+    "graphs = []\n",
+    "graphs.append(dict(data=graph_two, layout=layout_two))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Create reusable functions to be used in the pipeline"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Tokenization function to process text"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def tokenize(text):\n",
+    "    \"\"\"Tokenization function. \n",
+    "    Input : Raw text \n",
+    "    Output: Returns tokenized text. After normalized, stop words removed, stemmed and lemmatized.\n",
+    "    \"\"\"\n",
+    "    lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()\n",
+    "    stop_words = nltk.corpus.stopwords.words(\"english\")\n",
+    "    # Remove punctuations, change to lower case\n",
+    "    text = text.translate(str.maketrans('', '', string.punctuation)).lower()\n",
+    "    # tokenize text\n",
+    "    tokens = nltk.word_tokenize(text)\n",
+    "    # lemmatize and remove stop words\n",
+    "    return [lemmatizer.lemmatize(w) for w in tokens if w not in stop_words]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### A function to display classification report for each column"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "1    19874\n",
+       "0     6115\n",
+       "2      188\n",
+       "Name: related, dtype: int64"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "Y.related.value_counts()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "1    19874\n",
+       "0     6303\n",
+       "Name: related, dtype: int64"
+      ]
+     },
+     "execution_count": 13,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# We've found some data cleanup required in predictions \n",
+    "Y.related.replace(2, 0, inplace=True)\n",
+    "Y.related.value_counts()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# to speed up calc\n",
+    "#X = X.head(50)\n",
+    "#Y = Y.head(50)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 3. Build a machine learning pipeline\n",
+    "This machine pipeline should take in the `message` column as input and output classification results on the other 36 categories in the dataset. You may find the [MultiOutputClassifier](http://scikit-learn.org/stable/modules/generated/sklearn.multioutput.MultiOutputClassifier.html) helpful for predicting multiple target variables."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from sklearn.ensemble import RandomForestClassifier\n",
+    "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+    "from sklearn.multioutput import MultiOutputClassifier\n",
+    "from sklearn.pipeline import Pipeline\n",
+    "from sklearn.model_selection import train_test_split"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "clf = RandomForestClassifier()\n",
+    "pipeline = Pipeline([\n",
+    "                    ('vect', CountVectorizer(tokenizer=tokenize)),\n",
+    "                    ('tfidf', TfidfTransformer()),\n",
+    "                    ('clf', MultiOutputClassifier(clf))\n",
+    "                    ])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Pipeline(memory=None,\n",
+      "     steps=[('vect', CountVectorizer(analyzer='word', binary=False, decode_error='strict',\n",
+      "        dtype=<class 'numpy.int64'>, encoding='utf-8', input='content',\n",
+      "        lowercase=True, max_df=1.0, max_features=None, min_df=1,\n",
+      "        ngram_range=(1, 1), preprocessor=None, stop_words=None,\n",
+      "        strip...oob_score=False, random_state=None, verbose=0,\n",
+      "            warm_start=False),\n",
+      "           n_jobs=1))])\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(pipeline)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 4. Train pipeline\n",
+    "- Split data into train and test sets\n",
+    "- Train pipeline"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "X_train, X_test, Y_train, Y_test = train_test_split(X, Y, random_state=22)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(19632,)\n",
+      "(6545,)\n",
+      "(19632, 36)\n",
+      "(6545, 36)\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(X_train.shape)\n",
+    "print(X_test.shape)\n",
+    "print(Y_train.shape)\n",
+    "print(Y_test.shape)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "Pipeline(memory=None,\n",
+       "     steps=[('vect', CountVectorizer(analyzer='word', binary=False, decode_error='strict',\n",
+       "        dtype=<class 'numpy.int64'>, encoding='utf-8', input='content',\n",
+       "        lowercase=True, max_df=1.0, max_features=None, min_df=1,\n",
+       "        ngram_range=(1, 1), preprocessor=None, stop_words=None,\n",
+       "        strip...oob_score=False, random_state=None, verbose=0,\n",
+       "            warm_start=False),\n",
+       "           n_jobs=1))])"
+      ]
+     },
+     "execution_count": 22,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "pipeline.fit(X_train, Y_train)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 5. Test your model\n",
+    "Report the f1 score, precision and recall for each output category of the dataset. You can do this by iterating through the columns and calling sklearn's `classification_report` on each."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 41,
+   "metadata": {
+    "scrolled": false
+   },
+   "outputs": [],
+   "source": [
+    "y_pred = pipeline.predict(X_test)\n",
+    "y_pred_train = pipeline.predict(X_train)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 43,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "                        precision    recall  f1-score   support\n",
+      "\n",
+      "               related       0.86      0.90      0.88      5030\n",
+      "               request       0.78      0.40      0.53      1112\n",
+      "                 offer       0.00      0.00      0.00        34\n",
+      "           aid_related       0.73      0.59      0.66      2690\n",
+      "          medical_help       0.56      0.11      0.18       538\n",
+      "      medical_products       0.76      0.08      0.15       310\n",
+      "     search_and_rescue       0.59      0.06      0.10       177\n",
+      "              security       0.00      0.00      0.00       124\n",
+      "              military       0.80      0.07      0.13       226\n",
+      "           child_alone       0.00      0.00      0.00         0\n",
+      "                 water       0.85      0.26      0.40       400\n",
+      "                  food       0.86      0.47      0.60       710\n",
+      "               shelter       0.79      0.34      0.47       579\n",
+      "              clothing       0.71      0.10      0.17       103\n",
+      "                 money       0.78      0.05      0.09       146\n",
+      "        missing_people       0.25      0.01      0.03        71\n",
+      "              refugees       0.53      0.11      0.18       230\n",
+      "                 death       0.86      0.13      0.23       280\n",
+      "             other_aid       0.54      0.06      0.10       858\n",
+      "infrastructure_related       0.20      0.00      0.01       407\n",
+      "             transport       0.62      0.04      0.08       305\n",
+      "             buildings       0.64      0.13      0.22       313\n",
+      "           electricity       0.80      0.06      0.11       135\n",
+      "                 tools       0.00      0.00      0.00        29\n",
+      "             hospitals       0.00      0.00      0.00        64\n",
+      "                 shops       0.00      0.00      0.00        33\n",
+      "           aid_centers       0.00      0.00      0.00        68\n",
+      "  other_infrastructure       0.33      0.01      0.01       274\n",
+      "       weather_related       0.83      0.59      0.69      1805\n",
+      "                floods       0.86      0.39      0.54       520\n",
+      "                 storm       0.73      0.40      0.52       599\n",
+      "                  fire       1.00      0.04      0.08        70\n",
+      "            earthquake       0.88      0.68      0.77       595\n",
+      "                  cold       0.62      0.06      0.10       145\n",
+      "         other_weather       0.57      0.10      0.17       328\n",
+      "         direct_report       0.72      0.29      0.41      1275\n",
+      "\n",
+      "           avg / total       0.74      0.48      0.54     20583\n",
+      "\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/opt/conda/lib/python3.6/site-packages/sklearn/metrics/classification.py:1135: UndefinedMetricWarning: Precision and F-score are ill-defined and being set to 0.0 in labels with no predicted samples.\n",
+      "  'precision', 'predicted', average, warn_for)\n",
+      "/opt/conda/lib/python3.6/site-packages/sklearn/metrics/classification.py:1137: UndefinedMetricWarning: Recall and F-score are ill-defined and being set to 0.0 in labels with no true samples.\n",
+      "  'recall', 'true', average, warn_for)\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(classification_report(Y_test.values, y_pred, target_names=y.columns.values))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 44,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "                         precision    recall  f1-score   support\n",
+      "\n",
+      "               related       0.99      0.99      0.99     14844\n",
+      "               request       1.00      0.93      0.96      3352\n",
+      "                 offer       1.00      0.75      0.86        83\n",
+      "           aid_related       1.00      0.97      0.98      8150\n",
+      "          medical_help       1.00      0.86      0.92      1542\n",
+      "      medical_products       1.00      0.86      0.93      1000\n",
+      "     search_and_rescue       1.00      0.78      0.87       547\n",
+      "              security       0.99      0.72      0.84       347\n",
+      "              military       1.00      0.86      0.93       633\n",
+      "           child_alone       0.00      0.00      0.00         0\n",
+      "                 water       1.00      0.90      0.95      1269\n",
+      "                  food       1.00      0.94      0.97      2207\n",
+      "               shelter       1.00      0.92      0.96      1729\n",
+      "              clothing       1.00      0.85      0.92       301\n",
+      "                 money       1.00      0.83      0.91       457\n",
+      "        missing_people       1.00      0.71      0.83       227\n",
+      "              refugees       1.00      0.85      0.92       644\n",
+      "                 death       1.00      0.87      0.93       912\n",
+      "             other_aid       1.00      0.83      0.91      2583\n",
+      "infrastructure_related       1.00      0.78      0.87      1298\n",
+      "             transport       1.00      0.82      0.90       894\n",
+      "             buildings       1.00      0.88      0.94      1018\n",
+      "           electricity       1.00      0.81      0.89       397\n",
+      "                 tools       1.00      0.79      0.88       130\n",
+      "             hospitals       1.00      0.73      0.84       219\n",
+      "                 shops       1.00      0.66      0.79        87\n",
+      "           aid_centers       1.00      0.78      0.88       241\n",
+      "  other_infrastructure       1.00      0.78      0.88       877\n",
+      "       weather_related       1.00      0.96      0.98      5481\n",
+      "                floods       1.00      0.91      0.95      1629\n",
+      "                 storm       1.00      0.95      0.97      1841\n",
+      "                  fire       1.00      0.80      0.89       212\n",
+      "            earthquake       0.99      0.96      0.98      1857\n",
+      "                  cold       1.00      0.84      0.91       383\n",
+      "         other_weather       1.00      0.81      0.90      1048\n",
+      "         direct_report       1.00      0.91      0.95      3788\n",
+      "\n",
+      "           avg / total       1.00      0.92      0.96     62227\n",
+      "\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/opt/conda/lib/python3.6/site-packages/sklearn/metrics/classification.py:1135: UndefinedMetricWarning: Precision and F-score are ill-defined and being set to 0.0 in labels with no predicted samples.\n",
+      "  'precision', 'predicted', average, warn_for)\n",
+      "/opt/conda/lib/python3.6/site-packages/sklearn/metrics/classification.py:1137: UndefinedMetricWarning: Recall and F-score are ill-defined and being set to 0.0 in labels with no true samples.\n",
+      "  'recall', 'true', average, warn_for)\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Print classification report on training data\n",
+    "print('\\n',classification_report(Y_train.values, y_pred_train, target_names=y.columns.values))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 6. Improve your model\n",
+    "Use grid search to find better parameters. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 47,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "clf = RandomForestClassifier()\n",
+    "\n",
+    "pipeline1 = Pipeline([\n",
+    "                    ('vect', CountVectorizer(tokenizer=tokenize)),\n",
+    "                    ('tfidf', TfidfTransformer()),\n",
+    "                    ('clf', MultiOutputClassifier(clf))\n",
+    "                    ])\n",
+    "param_grid = {\n",
+    "        'clf__estimator__n_estimators': [10,20],\n",
+    "        'clf__estimator__min_samples_split': [2]  \n",
+    "      #,  'clf__estimator__criterion': ['entropy', 'gini']\n",
+    "     }"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 48,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Fitting 3 folds for each of 2 candidates, totalling 6 fits\n",
+      "[CV] clf__estimator__min_samples_split=2, clf__estimator__n_estimators=10 \n",
+      "[CV]  clf__estimator__min_samples_split=2, clf__estimator__n_estimators=10, score=0.5888800925643993, total=  54.7s\n",
+      "[CV] clf__estimator__min_samples_split=2, clf__estimator__n_estimators=10 \n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "[Parallel(n_jobs=-1)]: Done   1 out of   1 | elapsed:  1.1min remaining:    0.0s\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[CV]  clf__estimator__min_samples_split=2, clf__estimator__n_estimators=10, score=0.592601703514652, total=  54.2s\n",
+      "[CV] clf__estimator__min_samples_split=2, clf__estimator__n_estimators=10 \n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "[Parallel(n_jobs=-1)]: Done   2 out of   2 | elapsed:  2.2min remaining:    0.0s\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[CV]  clf__estimator__min_samples_split=2, clf__estimator__n_estimators=10, score=0.6043403666134907, total=  55.4s\n",
+      "[CV] clf__estimator__min_samples_split=2, clf__estimator__n_estimators=20 \n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "[Parallel(n_jobs=-1)]: Done   3 out of   3 | elapsed:  3.4min remaining:    0.0s\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[CV]  clf__estimator__min_samples_split=2, clf__estimator__n_estimators=20, score=0.614458190490386, total= 1.6min\n",
+      "[CV] clf__estimator__min_samples_split=2, clf__estimator__n_estimators=20 \n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "[Parallel(n_jobs=-1)]: Done   4 out of   4 | elapsed:  5.2min remaining:    0.0s\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[CV]  clf__estimator__min_samples_split=2, clf__estimator__n_estimators=20, score=0.6168635486981677, total= 1.6min\n",
+      "[CV] clf__estimator__min_samples_split=2, clf__estimator__n_estimators=20 \n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "[Parallel(n_jobs=-1)]: Done   5 out of   5 | elapsed:  7.0min remaining:    0.0s\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[CV]  clf__estimator__min_samples_split=2, clf__estimator__n_estimators=20, score=0.6161861133566873, total= 1.6min\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "[Parallel(n_jobs=-1)]: Done   6 out of   6 | elapsed:  8.9min remaining:    0.0s\n",
+      "[Parallel(n_jobs=-1)]: Done   6 out of   6 | elapsed:  8.9min finished\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "GridSearchCV(cv=None, error_score='raise',\n",
+       "       estimator=Pipeline(memory=None,\n",
+       "     steps=[('vect', CountVectorizer(analyzer='word', binary=False, decode_error='strict',\n",
+       "        dtype=<class 'numpy.int64'>, encoding='utf-8', input='content',\n",
+       "        lowercase=True, max_df=1.0, max_features=None, min_df=1,\n",
+       "        ngram_range=(1, 1), preprocessor=None, stop_words=None,\n",
+       "        strip...oob_score=False, random_state=None, verbose=0,\n",
+       "            warm_start=False),\n",
+       "           n_jobs=1))]),\n",
+       "       fit_params=None, iid=True, n_jobs=-1,\n",
+       "       param_grid={'clf__estimator__n_estimators': [10, 20], 'clf__estimator__min_samples_split': [2]},\n",
+       "       pre_dispatch='2*n_jobs', refit=True, return_train_score='warn',\n",
+       "       scoring='f1_micro', verbose=20)"
+      ]
+     },
+     "execution_count": 48,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "cv = GridSearchCV(pipeline1, param_grid=param_grid,scoring='f1_micro',n_jobs=-1,verbose=20)\n",
+    "cv.fit(X_train, Y_train)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 50,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Get the prediction values from the grid search cross validator\n",
+    "y_prediction_test = cv.predict(X_test)\n",
+    "y_prediction_train = cv.predict(X_train)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 52,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "                        precision    recall  f1-score   support\n",
+      "\n",
+      "               related       0.95      0.98      0.97      3983\n",
+      "               request       0.98      0.84      0.90       892\n",
+      "                 offer       1.00      0.65      0.79        17\n",
+      "           aid_related       0.94      0.91      0.93      2149\n",
+      "          medical_help       0.99      0.72      0.83       404\n",
+      "      medical_products       0.98      0.73      0.84       252\n",
+      "     search_and_rescue       0.98      0.68      0.81       149\n",
+      "              security       0.98      0.57      0.72        84\n",
+      "              military       0.99      0.72      0.84       173\n",
+      "           child_alone       0.00      0.00      0.00         0\n",
+      "                 water       0.97      0.82      0.89       344\n",
+      "                  food       0.98      0.86      0.92       604\n",
+      "               shelter       0.96      0.82      0.88       458\n",
+      "              clothing       0.96      0.75      0.84        72\n",
+      "                 money       0.99      0.64      0.78       128\n",
+      "        missing_people       1.00      0.70      0.82        57\n",
+      "              refugees       0.99      0.64      0.78       184\n",
+      "                 death       0.98      0.74      0.84       245\n",
+      "             other_aid       0.99      0.70      0.82       692\n",
+      "infrastructure_related       1.00      0.67      0.80       344\n",
+      "             transport       0.99      0.70      0.82       239\n",
+      "             buildings       0.99      0.74      0.85       260\n",
+      "           electricity       0.98      0.63      0.77        91\n",
+      "                 tools       1.00      0.77      0.87        26\n",
+      "             hospitals       1.00      0.59      0.75        69\n",
+      "                 shops       1.00      0.67      0.80        24\n",
+      "           aid_centers       1.00      0.60      0.75        53\n",
+      "  other_infrastructure       1.00      0.67      0.80       226\n",
+      "       weather_related       0.96      0.90      0.93      1432\n",
+      "                floods       0.97      0.83      0.89       432\n",
+      "                 storm       0.95      0.86      0.91       488\n",
+      "                  fire       1.00      0.50      0.67        46\n",
+      "            earthquake       0.97      0.93      0.95       451\n",
+      "                  cold       1.00      0.69      0.82       104\n",
+      "         other_weather       0.99      0.69      0.81       256\n",
+      "         direct_report       0.97      0.81      0.88      1006\n",
+      "\n",
+      "           avg / total       0.97      0.85      0.90     16434\n",
+      "\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/opt/conda/lib/python3.6/site-packages/sklearn/metrics/classification.py:1135: UndefinedMetricWarning: Precision and F-score are ill-defined and being set to 0.0 in labels with no predicted samples.\n",
+      "  'precision', 'predicted', average, warn_for)\n",
+      "/opt/conda/lib/python3.6/site-packages/sklearn/metrics/classification.py:1137: UndefinedMetricWarning: Recall and F-score are ill-defined and being set to 0.0 in labels with no true samples.\n",
+      "  'recall', 'true', average, warn_for)\n"
+     ]
+    }
+   ],
+   "source": [
+    "\n",
+    "# Print classification report on test data\n",
+    "print(classification_report(Y_test.values, y_prediction_test, target_names=y.columns.values))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 53,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[('vect',\n",
+      "  CountVectorizer(analyzer='word', binary=False, decode_error='strict',\n",
+      "        dtype=<class 'numpy.int64'>, encoding='utf-8', input='content',\n",
+      "        lowercase=True, max_df=1.0, max_features=None, min_df=1,\n",
+      "        ngram_range=(1, 1), preprocessor=None, stop_words=None,\n",
+      "        strip_accents=None, token_pattern='(?u)\\\\b\\\\w\\\\w+\\\\b',\n",
+      "        tokenizer=<function tokenize at 0x7f20202dee18>, vocabulary=None)),\n",
+      " ('tfidf',\n",
+      "  TfidfTransformer(norm='l2', smooth_idf=True, sublinear_tf=False, use_idf=True)),\n",
+      " ('clf',\n",
+      "  MultiOutputClassifier(estimator=RandomForestClassifier(bootstrap=True, class_weight=None, criterion='gini',\n",
+      "            max_depth=None, max_features='auto', max_leaf_nodes=None,\n",
+      "            min_impurity_decrease=0.0, min_impurity_split=None,\n",
+      "            min_samples_leaf=1, min_samples_split=2,\n",
+      "            min_weight_fraction_leaf=0.0, n_estimators=20, n_jobs=1,\n",
+      "            oob_score=False, random_state=None, verbose=0,\n",
+      "            warm_start=False),\n",
+      "           n_jobs=1))]\n"
+     ]
+    }
+   ],
+   "source": [
+    "from pprint import pprint\n",
+    "pprint(cv.best_estimator_.steps)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 54,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def evaluate_model(model, X_test, Y_test, category_names):\n",
+    "  \n",
+    "    Y_pred = model.predict(X_test)\n",
+    "    \n",
+    "    # Calculate model accuracy \n",
+    "    for i in range(len(category_names)):\n",
+    "        print(\"Category:\", category_names[i],\"\\n\", classification_report(Y_test.iloc[:, i].values, Y_pred[:, i]))\n",
+    "        print('Accuracy of %25s: %.2f' %(category_names[i], accuracy_score(Y_test.iloc[:, i].values, Y_pred[:,i])))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 7. Test your model\n",
+    "Show the accuracy, precision, and recall of the tuned model.  \n",
+    "\n",
+    "Since this project focuses on code quality, process, and  pipelines, there is no minimum performance metric needed to pass. However, make sure to fine tune your models for accuracy, precision and recall to make your project stand out - especially for your portfolio!"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 55,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Category: related \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.94      0.85      0.89      1253\n",
+      "          1       0.95      0.98      0.97      3983\n",
+      "\n",
+      "avg / total       0.95      0.95      0.95      5236\n",
+      "\n",
+      "Accuracy of                   related: 0.95\n",
+      "Category: request \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.97      1.00      0.98      4344\n",
+      "          1       0.98      0.84      0.90       892\n",
+      "\n",
+      "avg / total       0.97      0.97      0.97      5236\n",
+      "\n",
+      "Accuracy of                   request: 0.97\n",
+      "Category: offer \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       1.00      1.00      1.00      5219\n",
+      "          1       1.00      0.65      0.79        17\n",
+      "\n",
+      "avg / total       1.00      1.00      1.00      5236\n",
+      "\n",
+      "Accuracy of                     offer: 1.00\n",
+      "Category: aid_related \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.94      0.96      0.95      3087\n",
+      "          1       0.94      0.91      0.93      2149\n",
+      "\n",
+      "avg / total       0.94      0.94      0.94      5236\n",
+      "\n",
+      "Accuracy of               aid_related: 0.94\n",
+      "Category: medical_help \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.98      1.00      0.99      4832\n",
+      "          1       0.99      0.72      0.83       404\n",
+      "\n",
+      "avg / total       0.98      0.98      0.98      5236\n",
+      "\n",
+      "Accuracy of              medical_help: 0.98\n",
+      "Category: medical_products \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      0.99      4984\n",
+      "          1       0.98      0.73      0.84       252\n",
+      "\n",
+      "avg / total       0.99      0.99      0.99      5236\n",
+      "\n",
+      "Accuracy of          medical_products: 0.99\n",
+      "Category: search_and_rescue \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      1.00      5087\n",
+      "          1       0.98      0.68      0.81       149\n",
+      "\n",
+      "avg / total       0.99      0.99      0.99      5236\n",
+      "\n",
+      "Accuracy of         search_and_rescue: 0.99\n",
+      "Category: security \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      1.00      5152\n",
+      "          1       0.98      0.57      0.72        84\n",
+      "\n",
+      "avg / total       0.99      0.99      0.99      5236\n",
+      "\n",
+      "Accuracy of                  security: 0.99\n",
+      "Category: military \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      1.00      5063\n",
+      "          1       0.99      0.72      0.84       173\n",
+      "\n",
+      "avg / total       0.99      0.99      0.99      5236\n",
+      "\n",
+      "Accuracy of                  military: 0.99\n",
+      "Category: child_alone \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       1.00      1.00      1.00      5236\n",
+      "\n",
+      "avg / total       1.00      1.00      1.00      5236\n",
+      "\n",
+      "Accuracy of               child_alone: 1.00\n",
+      "Category: water \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      0.99      4892\n",
+      "          1       0.97      0.82      0.89       344\n",
+      "\n",
+      "avg / total       0.99      0.99      0.99      5236\n",
+      "\n",
+      "Accuracy of                     water: 0.99\n",
+      "Category: food \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.98      1.00      0.99      4632\n",
+      "          1       0.98      0.86      0.92       604\n",
+      "\n",
+      "avg / total       0.98      0.98      0.98      5236\n",
+      "\n",
+      "Accuracy of                      food: 0.98\n",
+      "Category: shelter \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.98      1.00      0.99      4778\n",
+      "          1       0.96      0.82      0.88       458\n",
+      "\n",
+      "avg / total       0.98      0.98      0.98      5236\n",
+      "\n",
+      "Accuracy of                   shelter: 0.98\n",
+      "Category: clothing \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       1.00      1.00      1.00      5164\n",
+      "          1       0.96      0.75      0.84        72\n",
+      "\n",
+      "avg / total       1.00      1.00      1.00      5236\n",
+      "\n",
+      "Accuracy of                  clothing: 1.00\n",
+      "Category: money \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      1.00      5108\n",
+      "          1       0.99      0.64      0.78       128\n",
+      "\n",
+      "avg / total       0.99      0.99      0.99      5236\n",
+      "\n",
+      "Accuracy of                     money: 0.99\n",
+      "Category: missing_people \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       1.00      1.00      1.00      5179\n",
+      "          1       1.00      0.70      0.82        57\n",
+      "\n",
+      "avg / total       1.00      1.00      1.00      5236\n",
+      "\n",
+      "Accuracy of            missing_people: 1.00\n",
+      "Category: refugees \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      0.99      5052\n",
+      "          1       0.99      0.64      0.78       184\n",
+      "\n",
+      "avg / total       0.99      0.99      0.99      5236\n",
+      "\n",
+      "Accuracy of                  refugees: 0.99\n",
+      "Category: death \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      0.99      4991\n",
+      "          1       0.98      0.74      0.84       245\n",
+      "\n",
+      "avg / total       0.99      0.99      0.99      5236\n",
+      "\n",
+      "Accuracy of                     death: 0.99\n",
+      "Category: other_aid \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.96      1.00      0.98      4544\n",
+      "          1       0.99      0.70      0.82       692\n",
+      "\n",
+      "avg / total       0.96      0.96      0.96      5236\n",
+      "\n",
+      "Accuracy of                 other_aid: 0.96\n",
+      "Category: infrastructure_related \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.98      1.00      0.99      4892\n",
+      "          1       1.00      0.67      0.80       344\n",
+      "\n",
+      "avg / total       0.98      0.98      0.98      5236\n",
+      "\n",
+      "Accuracy of    infrastructure_related: 0.98\n",
+      "Category: transport \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      0.99      4997\n",
+      "          1       0.99      0.70      0.82       239\n",
+      "\n",
+      "avg / total       0.99      0.99      0.98      5236\n",
+      "\n",
+      "Accuracy of                 transport: 0.99\n",
+      "Category: buildings \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      0.99      4976\n",
+      "          1       0.99      0.74      0.85       260\n",
+      "\n",
+      "avg / total       0.99      0.99      0.99      5236\n",
+      "\n",
+      "Accuracy of                 buildings: 0.99\n",
+      "Category: electricity \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      1.00      5145\n",
+      "          1       0.98      0.63      0.77        91\n",
+      "\n",
+      "avg / total       0.99      0.99      0.99      5236\n",
+      "\n",
+      "Accuracy of               electricity: 0.99\n",
+      "Category: tools \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       1.00      1.00      1.00      5210\n",
+      "          1       1.00      0.77      0.87        26\n",
+      "\n",
+      "avg / total       1.00      1.00      1.00      5236\n",
+      "\n",
+      "Accuracy of                     tools: 1.00\n",
+      "Category: hospitals \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      1.00      5167\n",
+      "          1       1.00      0.59      0.75        69\n",
+      "\n",
+      "avg / total       0.99      0.99      0.99      5236\n",
+      "\n",
+      "Accuracy of                 hospitals: 0.99\n",
+      "Category: shops \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       1.00      1.00      1.00      5212\n",
+      "          1       1.00      0.67      0.80        24\n",
+      "\n",
+      "avg / total       1.00      1.00      1.00      5236\n",
+      "\n",
+      "Accuracy of                     shops: 1.00\n",
+      "Category: aid_centers \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       1.00      1.00      1.00      5183\n",
+      "          1       1.00      0.60      0.75        53\n",
+      "\n",
+      "avg / total       1.00      1.00      1.00      5236\n",
+      "\n",
+      "Accuracy of               aid_centers: 1.00\n",
+      "Category: other_infrastructure \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      0.99      5010\n",
+      "          1       1.00      0.67      0.80       226\n",
+      "\n",
+      "avg / total       0.99      0.99      0.98      5236\n",
+      "\n",
+      "Accuracy of      other_infrastructure: 0.99\n",
+      "Category: weather_related \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.96      0.99      0.97      3804\n",
+      "          1       0.96      0.90      0.93      1432\n",
+      "\n",
+      "avg / total       0.96      0.96      0.96      5236\n",
+      "\n",
+      "Accuracy of           weather_related: 0.96\n",
+      "Category: floods \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.98      1.00      0.99      4804\n",
+      "          1       0.97      0.83      0.89       432\n",
+      "\n",
+      "avg / total       0.98      0.98      0.98      5236\n",
+      "\n",
+      "Accuracy of                    floods: 0.98\n",
+      "Category: storm \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      0.99      4748\n",
+      "          1       0.95      0.86      0.91       488\n",
+      "\n",
+      "avg / total       0.98      0.98      0.98      5236\n",
+      "\n",
+      "Accuracy of                     storm: 0.98\n",
+      "Category: fire \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       1.00      1.00      1.00      5190\n",
+      "          1       1.00      0.50      0.67        46\n",
+      "\n",
+      "avg / total       1.00      1.00      0.99      5236\n",
+      "\n",
+      "Accuracy of                      fire: 1.00\n",
+      "Category: earthquake \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      1.00      4785\n",
+      "          1       0.97      0.93      0.95       451\n",
+      "\n",
+      "avg / total       0.99      0.99      0.99      5236\n",
+      "\n",
+      "Accuracy of                earthquake: 0.99\n",
+      "Category: cold \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.99      1.00      1.00      5132\n",
+      "          1       1.00      0.69      0.82       104\n",
+      "\n",
+      "avg / total       0.99      0.99      0.99      5236\n",
+      "\n",
+      "Accuracy of                      cold: 0.99\n",
+      "Category: other_weather \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.98      1.00      0.99      4980\n",
+      "          1       0.99      0.69      0.81       256\n",
+      "\n",
+      "avg / total       0.98      0.98      0.98      5236\n",
+      "\n",
+      "Accuracy of             other_weather: 0.98\n",
+      "Category: direct_report \n",
+      "              precision    recall  f1-score   support\n",
+      "\n",
+      "          0       0.96      0.99      0.97      4230\n",
+      "          1       0.97      0.81      0.88      1006\n",
+      "\n",
+      "avg / total       0.96      0.96      0.96      5236\n",
+      "\n",
+      "Accuracy of             direct_report: 0.96\n"
+     ]
+    }
+   ],
+   "source": [
+    "evaluate_model(cv, X_test, Y_test, category_names)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#evaluate_model(cv.best_estimator_, X_test, Y_test)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 8. Try improving your model further. Here are a few ideas:\n",
+    "* try other machine learning algorithms\n",
+    "* add other features besides the TF-IDF"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 9. Export your model as a pickle file"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 57,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['disaster_model_udacity_pj2.pkl']"
+      ]
+     },
+     "execution_count": 57,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import joblib\n",
+    "joblib.dump(cv.best_estimator_, 'disaster_model_udacity_pj2.pkl')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 10. Use this notebook to complete `train.py`\n",
+    "Use the template file attached in the Resources folder to write a script that runs the steps above to create a database and export a model based on a new dataset specified by the user."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 58,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = joblib.load(\"disaster_model_udacity_pj2.pkl\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 59,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "{'memory': None,\n",
+       " 'steps': [('vect',\n",
+       "   CountVectorizer(analyzer='word', binary=False, decode_error='strict',\n",
+       "           dtype=<class 'numpy.int64'>, encoding='utf-8', input='content',\n",
+       "           lowercase=True, max_df=1.0, max_features=None, min_df=1,\n",
+       "           ngram_range=(1, 1), preprocessor=None, stop_words=None,\n",
+       "           strip_accents=None, token_pattern='(?u)\\\\b\\\\w\\\\w+\\\\b',\n",
+       "           tokenizer=<function tokenize at 0x7f20202dee18>, vocabulary=None)),\n",
+       "  ('tfidf',\n",
+       "   TfidfTransformer(norm='l2', smooth_idf=True, sublinear_tf=False, use_idf=True)),\n",
+       "  ('clf',\n",
+       "   MultiOutputClassifier(estimator=RandomForestClassifier(bootstrap=True, class_weight=None, criterion='gini',\n",
+       "               max_depth=None, max_features='auto', max_leaf_nodes=None,\n",
+       "               min_impurity_decrease=0.0, min_impurity_split=None,\n",
+       "               min_samples_leaf=1, min_samples_split=2,\n",
+       "               min_weight_fraction_leaf=0.0, n_estimators=20, n_jobs=1,\n",
+       "               oob_score=False, random_state=None, verbose=0,\n",
+       "               warm_start=False),\n",
+       "              n_jobs=1))],\n",
+       " 'vect': CountVectorizer(analyzer='word', binary=False, decode_error='strict',\n",
+       "         dtype=<class 'numpy.int64'>, encoding='utf-8', input='content',\n",
+       "         lowercase=True, max_df=1.0, max_features=None, min_df=1,\n",
+       "         ngram_range=(1, 1), preprocessor=None, stop_words=None,\n",
+       "         strip_accents=None, token_pattern='(?u)\\\\b\\\\w\\\\w+\\\\b',\n",
+       "         tokenizer=<function tokenize at 0x7f20202dee18>, vocabulary=None),\n",
+       " 'tfidf': TfidfTransformer(norm='l2', smooth_idf=True, sublinear_tf=False, use_idf=True),\n",
+       " 'clf': MultiOutputClassifier(estimator=RandomForestClassifier(bootstrap=True, class_weight=None, criterion='gini',\n",
+       "             max_depth=None, max_features='auto', max_leaf_nodes=None,\n",
+       "             min_impurity_decrease=0.0, min_impurity_split=None,\n",
+       "             min_samples_leaf=1, min_samples_split=2,\n",
+       "             min_weight_fraction_leaf=0.0, n_estimators=20, n_jobs=1,\n",
+       "             oob_score=False, random_state=None, verbose=0,\n",
+       "             warm_start=False),\n",
+       "            n_jobs=1),\n",
+       " 'vect__analyzer': 'word',\n",
+       " 'vect__binary': False,\n",
+       " 'vect__decode_error': 'strict',\n",
+       " 'vect__dtype': numpy.int64,\n",
+       " 'vect__encoding': 'utf-8',\n",
+       " 'vect__input': 'content',\n",
+       " 'vect__lowercase': True,\n",
+       " 'vect__max_df': 1.0,\n",
+       " 'vect__max_features': None,\n",
+       " 'vect__min_df': 1,\n",
+       " 'vect__ngram_range': (1, 1),\n",
+       " 'vect__preprocessor': None,\n",
+       " 'vect__stop_words': None,\n",
+       " 'vect__strip_accents': None,\n",
+       " 'vect__token_pattern': '(?u)\\\\b\\\\w\\\\w+\\\\b',\n",
+       " 'vect__tokenizer': <function __main__.tokenize(text)>,\n",
+       " 'vect__vocabulary': None,\n",
+       " 'tfidf__norm': 'l2',\n",
+       " 'tfidf__smooth_idf': True,\n",
+       " 'tfidf__sublinear_tf': False,\n",
+       " 'tfidf__use_idf': True,\n",
+       " 'clf__estimator__bootstrap': True,\n",
+       " 'clf__estimator__class_weight': None,\n",
+       " 'clf__estimator__criterion': 'gini',\n",
+       " 'clf__estimator__max_depth': None,\n",
+       " 'clf__estimator__max_features': 'auto',\n",
+       " 'clf__estimator__max_leaf_nodes': None,\n",
+       " 'clf__estimator__min_impurity_decrease': 0.0,\n",
+       " 'clf__estimator__min_impurity_split': None,\n",
+       " 'clf__estimator__min_samples_leaf': 1,\n",
+       " 'clf__estimator__min_samples_split': 2,\n",
+       " 'clf__estimator__min_weight_fraction_leaf': 0.0,\n",
+       " 'clf__estimator__n_estimators': 20,\n",
+       " 'clf__estimator__n_jobs': 1,\n",
+       " 'clf__estimator__oob_score': False,\n",
+       " 'clf__estimator__random_state': None,\n",
+       " 'clf__estimator__verbose': 0,\n",
+       " 'clf__estimator__warm_start': False,\n",
+       " 'clf__estimator': RandomForestClassifier(bootstrap=True, class_weight=None, criterion='gini',\n",
+       "             max_depth=None, max_features='auto', max_leaf_nodes=None,\n",
+       "             min_impurity_decrease=0.0, min_impurity_split=None,\n",
+       "             min_samples_leaf=1, min_samples_split=2,\n",
+       "             min_weight_fraction_leaf=0.0, n_estimators=20, n_jobs=1,\n",
+       "             oob_score=False, random_state=None, verbose=0,\n",
+       "             warm_start=False),\n",
+       " 'clf__n_jobs': 1}"
+      ]
+     },
+     "execution_count": 59,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "model.get_params()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

@@ -132,11 +132,6 @@ print("Model loaded")
 @app.route('/')
 @app.route('/index')
 def index():
-    
-    # extract data needed for visualsls 
-    # TODO: Below is an example - modify to extract data for your own visuals
-
-    
     # create visuals
     graphs = return_graphs(df)
     
@@ -146,7 +141,6 @@ def index():
     
     # render web page with plotly graphs
     return render_template('master.html', ids=ids, graphJSON=graphJSON)
-
 
 # web page that handles user query and displays model results
 @app.route('/go')
